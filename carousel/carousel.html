@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel — Prototipo</title>
+  <style>
+
+    /* ============================================================
+       SISTEMA CAROUSEL — VARIABILI
+       Modifica solo questi valori per aggiornare il sistema.
+    ============================================================ */
+    :root {
+      /* Griglia — mobile (default) */
+      --padding: 16px;
+      --gap: 8px;
+
+      /* N visibili per tipo */
+      --n-video: 1.5;
+      --n-image: 2.5;
+
+      /* Limiti card */
+      --video-min: 220px;
+      --video-max: 320px;
+      --image-min: 128px;
+      --image-max: 256px;
+    }
+
+    /* 768px — padding/gap ancora mobile, N aumenta */
+    @media (min-width: 768px) {
+      :root {
+        --n-video: 2.5;
+        --n-image: 3.5;
+      }
+    }
+
+    /* 1024px — switch a griglia desktop */
+    @media (min-width: 1024px) {
+      :root {
+        --padding: 64px;
+        --gap: 16px;
+        --n-video: 3.5;
+        --n-image: 4.5;
+      }
+    }
+
+    /* 1440px */
+    @media (min-width: 1440px) {
+      :root {
+        --n-video: 4.5;
+        --n-image: 5.5;
+      }
+    }
+
+
+    /* ============================================================
+       BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #EBEBEB;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 40px 0 64px;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      padding: 0 var(--padding);
+      margin-bottom: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #999;
+    }
+
+
+    /* ============================================================
+       CAROUSEL CONTAINER
+    ============================================================ */
+    .carousel {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: var(--gap);
+      /* padding-left sul container viene ignorato con overflow:auto —
+         il padding è applicato tramite margin-left sul primo figlio */
+      padding: 0;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      cursor: grab;
+    }
+    .carousel::-webkit-scrollbar { display: none; }
+    .carousel:active { cursor: grabbing; }
+
+
+    /* ============================================================
+       CARD VIDEO 16:9
+       Formula: clamp(min, (100vw - padding*2 - gap*(N-1)) / N, max)
+    ============================================================ */
+    /* Spacer per padding sinistro — larghezza impostata via JS.
+       scroll-snap-align: start rende posizione 0 un punto di snap valido,
+       evitando che il browser salti automaticamente alla prima card */
+    .carousel-spacer {
+      flex-shrink: 0;
+      flex-grow: 0;
+      display: block;
+      scroll-snap-align: start;
+    }
+
+    .card-video {
+      flex: 0 0 auto;
+      width: clamp(
+        var(--video-min),
+        calc((100vw - var(--padding) * 2 - var(--gap) * (var(--n-video) - 1)) / var(--n-video)),
+        var(--video-max)
+      );
+      scroll-snap-align: start;
+    }
+
+    .card-video__thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #C8C8C8;
+      border-radius: 6px;
+      position: relative;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    /* Icona play */
+    .card-video__thumb::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 8px 0 8px 16px;
+      border-color: transparent transparent transparent rgba(255,255,255,0.5);
+    }
+
+    .card-video__duration {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Placeholder testo: label */
+    .card-video__label {
+      height: 9px;
+      width: 38%;
+      background: #C0C0C0;
+      border-radius: 3px;
+      margin-bottom: 7px;
+    }
+
+    /* Placeholder testo: titolo riga 1 */
+    .card-video__title-1 {
+      height: 11px;
+      width: 100%;
+      background: #A8A8A8;
+      border-radius: 3px;
+      margin-bottom: 5px;
+    }
+
+    /* Placeholder testo: titolo riga 2 */
+    .card-video__title-2 {
+      height: 11px;
+      width: 72%;
+      background: #A8A8A8;
+      border-radius: 3px;
+      margin-bottom: 10px;
+    }
+
+    /* Metadata row */
+    .card-video__meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-video__pill {
+      height: 20px;
+      padding: 0 10px;
+      background: #D8D8D8;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-video__pill-text {
+      width: 56px;
+      height: 8px;
+      background: #B0B0B0;
+      border-radius: 2px;
+    }
+
+    .card-video__date {
+      height: 9px;
+      width: 52px;
+      background: #C0C0C0;
+      border-radius: 3px;
+    }
+
+
+    /* ============================================================
+       CARD IMMAGINE 3:4
+       Solo rettangolo, nessun metadato
+    ============================================================ */
+    .card-image {
+      flex: 0 0 auto;
+      width: clamp(
+        var(--image-min),
+        calc((100vw - var(--padding) * 2 - var(--gap) * (var(--n-image) - 1)) / var(--n-image)),
+        var(--image-max)
+      );
+      scroll-snap-align: start;
+    }
+
+    .card-image__thumb {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      background: #C8C8C8;
+      border-radius: 6px;
+    }
+
+
+    /* ============================================================
+       DEBUG BAR
+       Solo per sviluppo — rimuovere in produzione
+    ============================================================ */
+    .debug {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Roboto Mono', monospace;
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 20px;
+      z-index: 100;
+    }
+
+    .debug span { color: #aaa; }
+    .debug b { color: #fff; }
+    .debug .sep { color: #444; }
+
+  </style>
+</head>
+<body>
+
+  <!-- VIDEO CAROUSEL -->
+  <div class="section">
+    <div class="section-label">Video 16:9 — N <span id="lbl-n-video"></span> — min 220px / max 320px</div>
+    <div class="carousel" id="carousel-video"></div>
+  </div>
+
+  <!-- IMAGE CAROUSEL -->
+  <div class="section">
+    <div class="section-label">Immagine 3:4 — N <span id="lbl-n-image"></span> — min 128px / max 256px</div>
+    <div class="carousel" id="carousel-image"></div>
+  </div>
+
+  <!-- DEBUG BAR -->
+  <div class="debug" id="debug"></div>
+
+
+  <script>
+    function getPadding() {
+      return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--padding')) || 16;
+    }
+
+    function updateSpacers() {
+      const pad = getPadding() + 'px';
+      document.querySelectorAll('.carousel-spacer').forEach(s => {
+        s.style.width = pad;
+        s.style.minWidth = pad;
+      });
+    }
+
+    window.addEventListener('resize', updateSpacers);
+
+    /* Genera card video */
+    const vc = document.getElementById('carousel-video');
+    vc.innerHTML = '<div class="carousel-spacer"></div>';
+    for (let i = 0; i < 10; i++) {
+      vc.innerHTML += `
+        <div class="card-video">
+          <div class="card-video__thumb">
+            <span class="card-video__duration">5 min</span>
+          </div>
+          <div class="card-video__label"></div>
+          <div class="card-video__title-1"></div>
+          <div class="card-video__title-2"></div>
+          <div class="card-video__meta">
+            <div class="card-video__pill"><div class="card-video__pill-text"></div></div>
+            <div class="card-video__date"></div>
+          </div>
+        </div>`;
+    }
+
+    /* Genera card immagine */
+    const ic = document.getElementById('carousel-image');
+    ic.innerHTML = '<div class="carousel-spacer"></div>';
+    for (let i = 0; i < 10; i++) {
+      ic.innerHTML += `
+        <div class="card-image">
+          <div class="card-image__thumb"></div>
+        </div>`;
+    }
+
+    /* Debug bar */
+    function updateDebug() {
+      const vw = window.innerWidth;
+      const cs = getComputedStyle(document.documentElement);
+      const pad  = parseFloat(cs.getPropertyValue('--padding'));
+      const gap  = parseFloat(cs.getPropertyValue('--gap'));
+      const nV   = parseFloat(cs.getPropertyValue('--n-video'));
+      const nI   = parseFloat(cs.getPropertyValue('--n-image'));
+
+      const rawV  = (vw - pad * 2 - gap * (nV - 1)) / nV;
+      const rawI  = (vw - pad * 2 - gap * (nI - 1)) / nI;
+      const cardV = Math.min(320, Math.max(220, rawV));
+      const cardI = Math.min(256, Math.max(128, rawI));
+      const clampedV = rawV !== cardV ? ' ⚠ clamped' : '';
+      const clampedI = rawI !== cardI ? ' ⚠ clamped' : '';
+
+      /* Breakpoint label */
+      let bp = 'mobile';
+      if (vw >= 1440) bp = '1440px';
+      else if (vw >= 1024) bp = '1024px';
+      else if (vw >= 768)  bp = '768px';
+
+      /* Aggiorna label sezioni */
+      document.getElementById('lbl-n-video').textContent = nV;
+      document.getElementById('lbl-n-image').textContent = nI;
+
+      document.getElementById('debug').innerHTML =
+        `<span>vw: <b>${vw}px</b></span>` +
+        `<span class="sep">|</span>` +
+        `<span>breakpoint: <b>${bp}</b></span>` +
+        `<span class="sep">|</span>` +
+        `<span>padding: <b>${pad}px</b></span>` +
+        `<span>gap: <b>${gap}px</b></span>` +
+        `<span class="sep">|</span>` +
+        `<span>video — N: <b>${nV}</b>  card: <b>${Math.round(cardV)}px${clampedV}</b></span>` +
+        `<span class="sep">|</span>` +
+        `<span>image — N: <b>${nI}</b>  card: <b>${Math.round(cardI)}px${clampedI}</b></span>`;
+    }
+
+    updateSpacers();
+    updateDebug();
+    window.addEventListener('resize', updateDebug);
+  </script>
+
+</body>
+</html>
