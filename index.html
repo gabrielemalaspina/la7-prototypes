@@ -12,25 +12,13 @@
       background: #f5f5f5;
       color: #111;
       padding: 48px 24px;
-      max-width: 800px;
+      max-width: 720px;
       margin: 0 auto;
     }
 
-    header {
-      margin-bottom: 48px;
-    }
-
-    header h1 {
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-    }
-
-    header p {
-      margin-top: 6px;
-      font-size: 14px;
-      color: #666;
-    }
+    header { margin-bottom: 48px; }
+    header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+    header p { margin-top: 6px; font-size: 14px; color: #666; }
 
     .section-title {
       font-size: 11px;
@@ -47,16 +35,10 @@
       border-radius: 8px;
       overflow: hidden;
       background: #fff;
-      margin-bottom: 40px;
     }
 
-    .list li {
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .list li:last-child {
-      border-bottom: none;
-    }
+    .list li { border-bottom: 1px solid #e0e0e0; }
+    .list li:last-child { border-bottom: none; }
 
     .list a {
       display: flex;
@@ -68,102 +50,141 @@
       transition: background 0.1s;
     }
 
-    .list a:hover {
-      background: #f9f9f9;
-    }
+    .list a:hover { background: #f9f9f9; }
 
-    .item-info {
+    .item-name { font-size: 15px; font-weight: 500; }
+    .item-desc { font-size: 13px; color: #888; margin-top: 3px; }
+    .arrow { color: #bbb; font-size: 18px; flex-shrink: 0; margin-left: 16px; }
+
+    .item-row {
       display: flex;
-      flex-direction: column;
-      gap: 3px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
     }
 
-    .item-name {
-      font-size: 15px;
-      font-weight: 500;
-    }
-
-    .item-desc {
-      font-size: 13px;
-      color: #888;
-    }
-
-    .item-versions {
-      display: flex;
-      gap: 6px;
-    }
+    .versions { display: flex; gap: 6px; }
 
     .version-tag {
       font-size: 11px;
       font-weight: 500;
       background: #f0f0f0;
       color: #555;
-      padding: 2px 8px;
+      padding: 3px 10px;
       border-radius: 20px;
       text-decoration: none;
       transition: background 0.1s;
     }
 
-    .version-tag:hover {
-      background: #e0e0e0;
-    }
+    .version-tag:hover { background: #e0e0e0; }
 
-    .arrow {
-      color: #bbb;
-      font-size: 18px;
-      margin-left: 16px;
-    }
-
-    footer {
-      font-size: 12px;
-      color: #bbb;
-      margin-top: 48px;
-    }
+    footer { font-size: 12px; color: #bbb; margin-top: 48px; }
+    footer a { color: #bbb; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>LA7 — Prototypes</h1>
-    <p>Componenti e pattern per il redesign di la7.it — uso interno e handoff dev</p>
+    <p>Componenti e pattern per il redesign di la7.it</p>
   </header>
 
-  <!-- ESEMPIO DI SEZIONE — duplica il blocco per aggiungere categorie -->
-  <p class="section-title">Componenti</p>
-  <ul class="list">
-
-    <!-- Prototipo con link diretto (una sola versione) -->
-    <li>
-      <a href="./example/">
-        <div class="item-info">
-          <span class="item-name">Example Component</span>
-          <span class="item-desc">Prototipo di esempio — sostituire con il primo vero componente</span>
-        </div>
-        <span class="arrow">→</span>
-      </a>
-    </li>
-
-    <!-- Prototipo con versioni multiple — rimuovi l'<a> wrapper e usa i tag versione -->
-    <!--
-    <li>
-      <div style="display:flex; align-items:center; justify-content:space-between; padding: 14px 18px;">
-        <div class="item-info">
-          <span class="item-name">Navigation Bar</span>
-          <span class="item-desc">Sticky nav con varianti mobile/desktop</span>
-        </div>
-        <div class="item-versions">
-          <a class="version-tag" href="./navbar/v1/">v1</a>
-          <a class="version-tag" href="./navbar/v2/">v2</a>
-        </div>
-      </div>
-    </li>
-    -->
-
+  <p class="section-title">Prototipi</p>
+  <ul class="list" id="list">
+    <li style="padding:14px 18px; font-size:14px; color:#999;">Caricamento…</li>
   </ul>
 
   <footer>
-    <a href="https://github.com/gabrielemalaspina/la7-prototypes" style="color:#bbb;">github.com/gabrielemalaspina/la7-prototypes</a>
+    <a href="https://github.com/gabrielemalaspina/la7-prototypes">github.com/gabrielemalaspina/la7-prototypes</a>
   </footer>
+
+  <script>
+    const REPO = "gabrielemalaspina/la7-prototypes";
+    const API  = `https://api.github.com/repos/${REPO}/contents/`;
+    const BASE = `https://gabrielemalaspina.github.io/la7-prototypes/`;
+
+    // Nomi da ignorare nell'elenco
+    const IGNORE = new Set([".github", "README.md", "index.html"]);
+
+    async function fetchJSON(url) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    }
+
+    async function fetchMeta(folder) {
+      try {
+        const data = await fetchJSON(`${API}${folder}/meta.json`);
+        const text = atob(data.content.replace(/\n/g, ""));
+        return JSON.parse(text);
+      } catch { return null; }
+    }
+
+    async function loadPrototypes() {
+      const list = document.getElementById("list");
+      try {
+        const items = await fetchJSON(API);
+        const folders = items.filter(i => i.type === "dir" && !IGNORE.has(i.name));
+
+        if (folders.length === 0) {
+          list.innerHTML = `<li style="padding:14px 18px;font-size:14px;color:#888;">Nessun prototipo ancora.</li>`;
+          return;
+        }
+
+        const rows = await Promise.all(folders.map(async f => {
+          const meta = await fetchMeta(f.name);
+          const name = meta?.name || f.name;
+          const desc = meta?.description || "";
+
+          // Cerca sotto-cartelle versionate (v1, v2, …)
+          let versions = [];
+          try {
+            const children = await fetchJSON(`${API}${f.name}`);
+            versions = children
+              .filter(c => c.type === "dir" && /^v\d+$/.test(c.name))
+              .map(c => c.name)
+              .sort();
+          } catch {}
+
+          return { slug: f.name, name, desc, versions };
+        }));
+
+        list.innerHTML = rows.map(p => {
+          if (p.versions.length > 1) {
+            const tags = p.versions.map(v =>
+              `<a class="version-tag" href="${BASE}${p.slug}/${v}/">${v}</a>`
+            ).join("");
+            return `<li>
+              <div class="item-row">
+                <div>
+                  <div class="item-name">${p.name}</div>
+                  ${p.desc ? `<div class="item-desc">${p.desc}</div>` : ""}
+                </div>
+                <div class="versions">${tags}</div>
+              </div>
+            </li>`;
+          }
+          const href = p.versions.length === 1
+            ? `${BASE}${p.slug}/${p.versions[0]}/`
+            : `${BASE}${p.slug}/`;
+          return `<li>
+            <a href="${href}">
+              <div>
+                <div class="item-name">${p.name}</div>
+                ${p.desc ? `<div class="item-desc">${p.desc}</div>` : ""}
+              </div>
+              <span class="arrow">→</span>
+            </a>
+          </li>`;
+        }).join("");
+
+      } catch {
+        list.innerHTML = `<li style="padding:14px 18px;font-size:14px;color:#c00;">Errore nel caricamento.</li>`;
+      }
+    }
+
+    loadPrototypes();
+  </script>
 
 </body>
 </html>
