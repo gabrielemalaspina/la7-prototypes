@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Responsive Player Prototype</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+    }
+
+    .page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* PLAYER WRAPPER (full width container) */
+    .player-wrapper {
+      width: 100%;
+      padding: 16px;
+    }
+
+    /* PLAYER: altezza = min(viewport disponibile, 16:9 a piena larghezza) */
+    .player {
+      width: 100%;
+      height: min(calc(100vh - 120px), calc((100vw - 32px) * 9 / 16));
+      min-height: 0;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* VIDEO 16:9: riempie sempre l'altezza del player; eventuali bande solo ai lati */
+    .video {
+      height: 100%;
+      width: auto;
+      aspect-ratio: 16 / 9;
+      max-width: 100%;
+      flex-shrink: 0;
+
+      background: #444;
+    }
+
+    /* FAKE CONTROLS OVERLAY (solo layout/posizionamento) */
+    .controls {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.78) 55%);
+      z-index: 2;
+    }
+
+    .progress {
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.25);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .progress__fill {
+      width: 32%;
+      height: 100%;
+      background: #ff2e2e;
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 32px;
+    }
+
+    .controls-left,
+    .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(20, 20, 20, 0.9);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      user-select: none;
+    }
+
+    .ctrl-btn {
+      min-width: 28px;
+      font-weight: 600;
+    }
+
+    .time {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.92);
+      min-width: 92px;
+    }
+
+    @media (max-width: 640px) {
+      .controls {
+        padding: 10px;
+      }
+
+      .time {
+        min-width: auto;
+      }
+    }
+
+    /* CONTENT BELOW */
+    .content {
+      padding: 0 16px;
+    }
+
+    .block {
+      height: 120px;
+      background: #222;
+      margin-bottom: 16px;
+      border-radius: 8px;
+    }
+
+    /* RESPONSIVE TWEAKS */
+    @media (max-width: 768px) {
+      .player {
+        height: min(calc(100vh - 160px), calc((100vw - 32px) * 9 / 16));
+      }
+    }
+
+    @media (max-height: 600px) {
+      .player {
+        height: min(calc(100vh - 80px), calc((100vw - 32px) * 9 / 16));
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="player-wrapper">
+      <div class="player">
+        <div class="video"></div>
+        <div class="controls">
+          <div class="progress">
+            <div class="progress__fill"></div>
+          </div>
+          <div class="controls-row">
+            <div class="controls-left">
+              <div class="ctrl-btn">▶</div>
+              <div class="time">01:12 / 10:00</div>
+            </div>
+            <div class="controls-right">
+              <div class="ctrl-btn">CC</div>
+              <div class="ctrl-btn">⛶</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="block"></div>
+      <div class="block"></div>
+      <div class="block"></div>
+    </div>
+
+  </div>
+</body>
+</html>
