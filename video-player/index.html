@@ -56,7 +56,7 @@
     /* PLAYER: altezza = min(viewport disponibile, 16:9 a piena larghezza) */
     .player {
       width: 100%;
-      height: min(calc(100vh - 64px - 128px), calc(100vw * 9 / 16));
+      height: min(calc(100vh - 64px - 64px), calc(100vw * 9 / 16));
       min-height: 0;
 
       display: flex;
@@ -159,7 +159,7 @@
     /* CONTENT BELOW */
     .content {
       padding: 16px;
-      opacity: 0.2;
+      opacity: 0.5;
       transition: opacity 0.35s ease;
     }
 
@@ -199,7 +199,7 @@
       }
 
       .player {
-        height: min(calc(100vh - 56px - 128px), calc(100vw * 9 / 16));
+        height: min(calc(100vh - 56px - 64px), calc(100vw * 9 / 16));
       }
 
       .content {
