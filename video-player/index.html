@@ -255,8 +255,25 @@
     }
 
     @media (max-width: 768px) {
+      .mini-close {
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      .mini-close.is-visible {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 768px) {
       .mini-player {
-        display: none !important;
+        bottom: auto;
+        right: auto;
+        top: 56px;
+        left: 0;
+        width: 100%;
+        height: calc(100vw * 9 / 16);
+        border-radius: 0;
+        box-shadow: none;
       }
     }
 
@@ -266,7 +283,7 @@
   <div class="page">
 
     <div class="topbar" id="topbar">
-      <span class="topbar-label">Navigazione</span>
+      <span class="topbar-label">Topbar</span>
     </div>
 
     <div class="player-wrapper">
@@ -330,42 +347,99 @@
   </div>
 
   <script>
-    const content   = document.getElementById('pageContent');
-    const topbar    = document.getElementById('topbar');
-    const mainPlayer = document.querySelector('.player');
-    const miniEl    = document.getElementById('miniPlayer');
+    // ─────────────────────────────────────────────────────────────────────────
+    // RIFERIMENTI DOM
+    // ─────────────────────────────────────────────────────────────────────────
+    const content    = document.getElementById('pageContent');
+    const topbar     = document.getElementById('topbar');
+    const mainPlayer = document.querySelector('.player');   // player principale full-width
+    const miniEl     = document.getElementById('miniPlayer'); // sticky player
+    const miniClose  = document.getElementById('miniClose');
 
-    // ── Variabili mini-player (dichiarate qui per evitare temporal dead zone in onScroll) ──
-    const MINI_W      = 544;
-    const MINI_H      = 306;
-    const MINI_MARGIN = 8;
-    let miniVisible  = false;
-    let dismissed    = false;
-    let hideTimeout  = null;
+    // ─────────────────────────────────────────────────────────────────────────
+    // COSTANTI STICKY PLAYER
+    // Dichiarate prima di onScroll() per evitare temporal dead zone:
+    // `let` non è hoisted come `var`, e onScroll() viene chiamata subito.
+    // ─────────────────────────────────────────────────────────────────────────
+    const MINI_W      = 544;   // larghezza fissa desktop (px)
+    const MINI_H      = 306;   // altezza fissa desktop (px) — esatto 16:9
+    const MINI_MARGIN = 8;     // distanza dai bordi viewport (desktop)
 
-    // ── Topbar + opacità contenuto ──────────────────────────────────────────
+    // miniVisible: lo sticky player è attualmente mostrato
+    // dismissed:   l'utente ha chiuso manualmente; blocca il riapparire fino
+    //              a che il player principale non ritorna visibile
+    // hideTimeout: riferimento al setTimeout che rimuove display:none dopo
+    //              il completamento dell'animazione di uscita desktop
+    let miniVisible = false;
+    let dismissed   = false;
+    let hideTimeout = null;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SCROLL HANDLER — topbar, opacità contenuto, sticky player
+    // ─────────────────────────────────────────────────────────────────────────
     let lastScrollY = window.scrollY;
 
     function onScroll() {
-      const scrollY    = window.scrollY;
+      const scrollY     = window.scrollY;
       const scrollingUp = scrollY < lastScrollY;
       lastScrollY = scrollY;
 
+      // Topbar: sfondo frosted glass dopo 10px di scroll
       const scrolled = scrollY > 10;
       content.classList.toggle('is-visible', scrolled);
       topbar.classList.toggle('scrolled', scrolled);
 
-      // Anticipa l'uscita solo quando si scrolla verso l'alto:
-      // evita che il check scatti subito dopo che il player è appena uscito dal viewport
-      if (miniVisible && scrollingUp) {
-        const rect = mainPlayer.getBoundingClientRect();
-        if (rect.bottom > -200) hideMiniPlayer();
+      if (isMobile()) {
+        // ── MOBILE ──────────────────────────────────────────────────────────
+        // Trigger posizione-dipendente: lo sticky appare non appena il bordo
+        // superiore del player principale tocca la topbar (top < 56px).
+        // Scompare quando il player ridiscende sopra quella soglia.
+        // Non si usa IntersectionObserver perché il trigger deve essere
+        // continuo e fluido, non a scomparsa completa del player.
+        const rect    = mainPlayer.getBoundingClientRect();
+        const topbarH = 56; // altezza topbar mobile (px)
+
+        // Reset dismissed: appena qualsiasi parte del player è visibile
+        // sotto la topbar, lo sticky può tornare ad apparire al prossimo scroll
+        if (rect.bottom > topbarH) dismissed = false;
+
+        const shouldShow = rect.top < topbarH && !dismissed;
+        if (shouldShow && !miniVisible)       showMiniPlayer();
+        else if (!shouldShow && miniVisible)  hideMiniPlayer();
+
+        // Il tasto ✕ è nascosto al momento dell'attivazione; compare solo
+        // quando il player principale è completamente scomparso (bottom <= 56px),
+        // ovvero dopo uno scroll pari all'altezza del player dal trigger iniziale
+        if (miniVisible) {
+          miniClose.classList.toggle('is-visible', rect.bottom <= topbarH);
+        }
+
+      } else {
+        // ── DESKTOP ─────────────────────────────────────────────────────────
+        // Uscita anticipata: nasconde lo sticky 200px prima che il player
+        // principale rientri nella viewport (solo scroll verso l'alto).
+        // Obiettivo: far terminare l'animazione di uscita (450ms) prima che
+        // i due player siano visibili simultaneamente.
+        // NB: su scroll veloce una breve sovrapposizione rimane possibile.
+        if (miniVisible && scrollingUp) {
+          const rect = mainPlayer.getBoundingClientRect();
+          if (rect.bottom > -200) hideMiniPlayer();
+        }
       }
     }
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    // ── Mini player FLIP ────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // UTILITY
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Breakpoint mobile: allineato al media query CSS (max-width: 768px)
+    function isMobile() {
+      return window.innerWidth <= 768;
+    }
+
+    // Centro del rettangolo finale dello sticky player nel viewport (desktop)
     function getMiniCenter() {
       return {
         x: window.innerWidth  - MINI_MARGIN - MINI_W / 2,
@@ -373,13 +447,32 @@
       };
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHOW — sticky player
+    // ─────────────────────────────────────────────────────────────────────────
     function showMiniPlayer() {
       if (miniVisible || dismissed) return;
       if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null; }
       miniVisible = true;
 
-      miniEl.style.display = 'block';
+      // Stato iniziale pulito (evita residui da animazioni precedenti)
+      miniEl.style.transition = 'none';
+      miniEl.style.transform  = 'none';
+      miniEl.style.opacity    = '1';
+      miniEl.style.display    = 'block';
 
+      if (isMobile()) return;
+      // Su mobile: snap, nessuna animazione.
+      // ✕ e visibilità sono gestiti dallo scroll listener in tempo reale.
+
+      // ── Desktop: animazione FLIP ─────────────────────────────────────────
+      // Tecnica FLIP (First–Last–Invert–Play):
+      // 1. FIRST: posizione corrente del player principale (probabilmente fuori
+      //    viewport, sopra il fold — rect.top negativo)
+      // 2. LAST: posizione finale dello sticky (bottom-right, 544×306px)
+      // 3. INVERT: applica un transform che fa sembrare lo sticky
+      //    posizionato/dimensionato come il player principale
+      // 4. PLAY: anima verso transform:none (posizione finale reale)
       const from = mainPlayer.getBoundingClientRect();
       const to   = getMiniCenter();
 
@@ -388,10 +481,12 @@
       const sx = from.width  / MINI_W;
       const sy = from.height / MINI_H;
 
-      miniEl.style.transition = 'none';
-      miniEl.style.transform  = `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`;
-      miniEl.style.opacity    = '0';
+      miniEl.style.opacity   = '0';
+      miniEl.style.transform = `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`;
 
+      // Doppio rAF: garantisce che il browser registri lo stato iniziale
+      // (transform+opacity) prima di avviare la transizione.
+      // Un singolo rAF non è sufficiente in tutti i browser.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           miniEl.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
@@ -401,10 +496,25 @@
       });
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // HIDE — sticky player
+    // ─────────────────────────────────────────────────────────────────────────
     function hideMiniPlayer() {
       if (!miniVisible) return;
       miniVisible = false;
 
+      if (isMobile()) {
+        // Su mobile: snap, nessuna animazione. Rimuove anche la classe ✕
+        // (può essere visibile se il player era completamente fuori vista)
+        miniClose.classList.remove('is-visible');
+        miniEl.style.display = 'none';
+        return;
+      }
+
+      // ── Desktop: FLIP inverso ────────────────────────────────────────────
+      // Anima lo sticky dalla sua posizione fissa verso la posizione
+      // corrente del player principale nel documento (che sta rientrando
+      // nella viewport dall'alto). Effetto: lo sticky "torna" al player.
       const to   = mainPlayer.getBoundingClientRect();
       const from = getMiniCenter();
 
@@ -417,26 +527,39 @@
       miniEl.style.transform  = `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`;
       miniEl.style.opacity    = '0';
 
+      // Rimuove display:block dopo il completamento dell'animazione.
+      // Il timeout è leggermente maggiore della durata della transizione (470 > 450ms).
       hideTimeout = setTimeout(() => {
         hideTimeout = null;
         if (!miniVisible) {
           miniEl.style.display   = 'none';
-          miniEl.style.transform = 'none';
+          miniEl.style.transform = 'none'; // reset per la prossima apparizione
         }
       }, 470);
     }
 
-    // Chiusura manuale: dismissed fino a che il player principale non è di nuovo visibile
-    document.getElementById('miniClose').addEventListener('click', () => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // CHIUSURA MANUALE (tasto ✕)
+    // ─────────────────────────────────────────────────────────────────────────
+    // dismissed = true blocca showMiniPlayer() finché il player principale
+    // non torna visibile (reset in onScroll: rect.bottom > topbarH su mobile,
+    // IntersectionObserver su desktop)
+    miniClose.addEventListener('click', () => {
       dismissed = true;
       hideMiniPlayer();
     });
 
-    // IntersectionObserver sul player principale
+    // ─────────────────────────────────────────────────────────────────────────
+    // INTERSECTION OBSERVER — solo desktop
+    // ─────────────────────────────────────────────────────────────────────────
+    // Su mobile il trigger è gestito dallo scroll listener (posizione continua).
+    // Su desktop, IntersectionObserver è più efficiente perché il trigger
+    // è a scomparsa completa dal viewport (threshold: 0 = qualsiasi pixel).
     const observer = new IntersectionObserver((entries) => {
+      if (isMobile()) return;
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          dismissed = false; // reset: se torna visible, il mini può riapparire
+          dismissed = false; // player tornato visibile: reset dismissed
           hideMiniPlayer();
         } else if (window.scrollY > 0) {
           showMiniPlayer();
