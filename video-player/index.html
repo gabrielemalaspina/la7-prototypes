@@ -19,16 +19,44 @@
       min-height: 100vh;
     }
 
+    /* TOPBAR */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 64px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      background: #111;
+      transition: background 0.3s ease;
+    }
+
+    .topbar.scrolled {
+      background: rgba(17, 17, 17, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .topbar-label {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+
     /* PLAYER WRAPPER (full width container) */
     .player-wrapper {
       width: 100%;
-      padding: 16px;
+      padding: 0px;
     }
 
     /* PLAYER: altezza = min(viewport disponibile, 16:9 a piena larghezza) */
     .player {
       width: 100%;
-      height: min(calc(100vh - 120px), calc((100vw - 32px) * 9 / 16));
+      height: min(calc(100vh - 64px - 128px), calc(100vw * 9 / 16));
       min-height: 0;
 
       display: flex;
@@ -36,7 +64,6 @@
       justify-content: center;
 
       background: #000;
-      border-radius: 12px;
       overflow: hidden;
       position: relative;
     }
@@ -75,7 +102,7 @@
     .progress__fill {
       width: 32%;
       height: 100%;
-      background: #ff2e2e;
+      background: #fff;
     }
 
     .controls-row {
@@ -131,11 +158,35 @@
 
     /* CONTENT BELOW */
     .content {
-      padding: 0 16px;
+      padding: 16px;
+      opacity: 0.2;
+      transition: opacity 0.35s ease;
+    }
+
+    .content.is-visible {
+      opacity: 1;
+    }
+
+    .content-header {
+      margin-bottom: 16px;
+    }
+
+    .content-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .content-desc {
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.6;
+      max-width: 720px;
     }
 
     .block {
-      height: 120px;
+      height: 375px;
       background: #222;
       margin-bottom: 16px;
       border-radius: 8px;
@@ -143,14 +194,75 @@
 
     /* RESPONSIVE TWEAKS */
     @media (max-width: 768px) {
+      .topbar {
+        height: 56px;
+      }
+
       .player {
-        height: min(calc(100vh - 160px), calc((100vw - 32px) * 9 / 16));
+        height: min(calc(100vh - 56px - 128px), calc(100vw * 9 / 16));
+      }
+
+      .content {
+        opacity: 1 !important;
+        transition: none !important;
       }
     }
 
     @media (max-height: 600px) {
       .player {
-        height: min(calc(100vh - 80px), calc((100vw - 32px) * 9 / 16));
+        height: min(calc(100vh - 80px), calc(100vw * 9 / 16));
+      }
+    }
+
+    /* MINI PLAYER */
+    .mini-player {
+      position: fixed;
+      bottom: 8px;
+      right: 8px;
+      width: 544px;
+      height: 306px;
+      background: #000;
+      border-radius: 6px;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      z-index: 50;
+      display: none;
+      transform-origin: center center;
+    }
+
+    /* Il video nel mini-player riempie tutto (il container è già 16:9) */
+    .mini-player .video {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: unset;
+    }
+
+    .mini-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 10;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mini-close:hover {
+      background: rgba(0, 0, 0, 0.85);
+    }
+
+    @media (max-width: 768px) {
+      .mini-player {
+        display: none !important;
       }
     }
 
@@ -158,6 +270,10 @@
 </head>
 <body>
   <div class="page">
+
+    <div class="topbar" id="topbar">
+      <span class="topbar-label">Navigazione</span>
+    </div>
 
     <div class="player-wrapper">
       <div class="player">
@@ -180,12 +296,161 @@
       </div>
     </div>
 
-    <div class="content">
+    <div class="content" id="pageContent">
+      <div class="content-header">
+        <div class="content-title">Atlantide — La civiltà perduta: nuove scoperte cambiano tutto</div>
+        <div class="content-desc">Un viaggio nell'archeologia subacquea alla ricerca di prove concrete sull'esistenza di Atlantide. Tra tecnologie all'avanguardia e testimonianze di esperti internazionali, la docu-serie esplora fondali inesplorati nel Mediterraneo e oltre.</div>
+      </div>
+      <div class="block"></div>
+      <div class="block"></div>
+      <div class="block"></div>
+      <div class="block"></div>
+      <div class="block"></div>
+      <div class="block"></div>
       <div class="block"></div>
       <div class="block"></div>
       <div class="block"></div>
     </div>
 
   </div>
+
+  <!-- MINI PLAYER (fixed, desktop only) -->
+  <div class="mini-player" id="miniPlayer">
+    <div class="mini-close" id="miniClose">✕</div>
+    <div class="video"></div>
+    <div class="controls">
+      <div class="progress">
+        <div class="progress__fill"></div>
+      </div>
+      <div class="controls-row">
+        <div class="controls-left">
+          <div class="ctrl-btn">▶</div>
+          <div class="time">01:12 / 10:00</div>
+        </div>
+        <div class="controls-right">
+          <div class="ctrl-btn">CC</div>
+          <div class="ctrl-btn">⛶</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const content   = document.getElementById('pageContent');
+    const topbar    = document.getElementById('topbar');
+    const mainPlayer = document.querySelector('.player');
+    const miniEl    = document.getElementById('miniPlayer');
+
+    // ── Variabili mini-player (dichiarate qui per evitare temporal dead zone in onScroll) ──
+    const MINI_W      = 544;
+    const MINI_H      = 306;
+    const MINI_MARGIN = 8;
+    let miniVisible  = false;
+    let dismissed    = false;
+    let hideTimeout  = null;
+
+    // ── Topbar + opacità contenuto ──────────────────────────────────────────
+    let lastScrollY = window.scrollY;
+
+    function onScroll() {
+      const scrollY    = window.scrollY;
+      const scrollingUp = scrollY < lastScrollY;
+      lastScrollY = scrollY;
+
+      const scrolled = scrollY > 10;
+      content.classList.toggle('is-visible', scrolled);
+      topbar.classList.toggle('scrolled', scrolled);
+
+      // Anticipa l'uscita solo quando si scrolla verso l'alto:
+      // evita che il check scatti subito dopo che il player è appena uscito dal viewport
+      if (miniVisible && scrollingUp) {
+        const rect = mainPlayer.getBoundingClientRect();
+        if (rect.bottom > -200) hideMiniPlayer();
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // ── Mini player FLIP ────────────────────────────────────────────────────
+    function getMiniCenter() {
+      return {
+        x: window.innerWidth  - MINI_MARGIN - MINI_W / 2,
+        y: window.innerHeight - MINI_MARGIN - MINI_H / 2
+      };
+    }
+
+    function showMiniPlayer() {
+      if (miniVisible || dismissed) return;
+      if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null; }
+      miniVisible = true;
+
+      miniEl.style.display = 'block';
+
+      const from = mainPlayer.getBoundingClientRect();
+      const to   = getMiniCenter();
+
+      const tx = (from.left + from.width  / 2) - to.x;
+      const ty = (from.top  + from.height / 2) - to.y;
+      const sx = from.width  / MINI_W;
+      const sy = from.height / MINI_H;
+
+      miniEl.style.transition = 'none';
+      miniEl.style.transform  = `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`;
+      miniEl.style.opacity    = '0';
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          miniEl.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+          miniEl.style.transform  = 'none';
+          miniEl.style.opacity    = '1';
+        });
+      });
+    }
+
+    function hideMiniPlayer() {
+      if (!miniVisible) return;
+      miniVisible = false;
+
+      const to   = mainPlayer.getBoundingClientRect();
+      const from = getMiniCenter();
+
+      const tx = (to.left + to.width  / 2) - from.x;
+      const ty = (to.top  + to.height / 2) - from.y;
+      const sx = to.width  / MINI_W;
+      const sy = to.height / MINI_H;
+
+      miniEl.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+      miniEl.style.transform  = `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`;
+      miniEl.style.opacity    = '0';
+
+      hideTimeout = setTimeout(() => {
+        hideTimeout = null;
+        if (!miniVisible) {
+          miniEl.style.display   = 'none';
+          miniEl.style.transform = 'none';
+        }
+      }, 470);
+    }
+
+    // Chiusura manuale: dismissed fino a che il player principale non è di nuovo visibile
+    document.getElementById('miniClose').addEventListener('click', () => {
+      dismissed = true;
+      hideMiniPlayer();
+    });
+
+    // IntersectionObserver sul player principale
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          dismissed = false; // reset: se torna visible, il mini può riapparire
+          hideMiniPlayer();
+        } else if (window.scrollY > 0) {
+          showMiniPlayer();
+        }
+      });
+    }, { threshold: 0 });
+
+    observer.observe(mainPlayer);
+  </script>
 </body>
 </html>
