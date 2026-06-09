@@ -56,7 +56,7 @@
     /* PLAYER: altezza = min(viewport disponibile, 16:9 a piena larghezza) */
     .player {
       width: 100%;
-      height: min(calc(100vh - 64px - 64px), calc(100vw * 9 / 16));
+      height: min(calc(100vh - 64px - 96px), calc(100vw * 9 / 16));
       min-height: 0;
 
       display: flex;
@@ -168,7 +168,50 @@
     }
 
     .content-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
       margin-bottom: 16px;
+    }
+
+    .content-cover {
+      flex-shrink: 0;
+      width: 180px;
+      aspect-ratio: 3 / 4;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .content-cover {
+        width: 90px;
+      }
+    }
+
+    .content-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .content-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .action-btn {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
     }
 
     .content-title {
@@ -199,7 +242,7 @@
       }
 
       .player {
-        height: min(calc(100vh - 56px - 64px), calc(100vw * 9 / 16));
+        height: min(calc(100vh - 56px - 96px), calc(100vw * 9 / 16));
       }
 
       .content {
@@ -309,8 +352,15 @@
 
     <div class="content" id="pageContent">
       <div class="content-header">
-        <div class="content-title">Atlantide — La civiltà perduta: nuove scoperte cambiano tutto</div>
-        <div class="content-desc">Un viaggio nell'archeologia subacquea alla ricerca di prove concrete sull'esistenza di Atlantide. Tra tecnologie all'avanguardia e testimonianze di esperti internazionali, la docu-serie esplora fondali inesplorati nel Mediterraneo e oltre.</div>
+        <div class="content-cover"></div>
+        <div class="content-body">
+          <div class="content-actions">
+            <div class="action-btn">Guarda dopo</div>
+            <div class="action-btn">Condividi</div>
+          </div>
+          <div class="content-title">Atlantide — La civiltà perduta: nuove scoperte cambiano tutto</div>
+          <div class="content-desc">Un viaggio nell'archeologia subacquea alla ricerca di prove concrete sull'esistenza di Atlantide. Tra tecnologie all'avanguardia e testimonianze di esperti internazionali, la docu-serie esplora fondali inesplorati nel Mediterraneo e oltre.</div>
+        </div>
       </div>
       <div class="block"></div>
       <div class="block"></div>
