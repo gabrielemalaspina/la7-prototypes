@@ -211,6 +211,29 @@
 
 
     /* ============================================================
+       CARD PODCAST 1:1
+       Stesse regole e larghezze del tipo Immagine 3:4 (stesse var),
+       cambia solo l'aspect-ratio del thumb.
+    ============================================================ */
+    .card-podcast {
+      flex: 0 0 auto;
+      width: clamp(
+        var(--image-min),
+        calc((100vw - var(--padding) - var(--gap) * (var(--n-image) - 0.5)) / var(--n-image)),
+        var(--image-max)
+      );
+      scroll-snap-align: start;
+    }
+
+    .card-podcast__thumb {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #C8C8C8;
+      border-radius: 6px;
+    }
+
+
+    /* ============================================================
        DEBUG BAR
        Solo per sviluppo — rimuovere in produzione
     ============================================================ */
@@ -251,6 +274,12 @@
     <div class="carousel" id="carousel-image"></div>
   </div>
 
+  <!-- PODCAST CAROUSEL -->
+  <div class="section">
+    <div class="section-label">Podcast 1:1 — N <span id="lbl-n-podcast"></span> — min 128px / max 256px — <span id="lbl-w-podcast"></span></div>
+    <div class="carousel" id="carousel-podcast"></div>
+  </div>
+
   <!-- DEBUG BAR -->
   <div class="debug" id="debug"></div>
 
@@ -282,6 +311,16 @@
         </div>`;
     }
 
+    /* Genera card podcast */
+    const pc = document.getElementById('carousel-podcast');
+    pc.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      pc.innerHTML += `
+        <div class="card-podcast">
+          <div class="card-podcast__thumb"></div>
+        </div>`;
+    }
+
     /* Debug bar */
     function updateDebug() {
       const vw = window.innerWidth;
@@ -309,6 +348,8 @@
       document.getElementById('lbl-n-image').textContent = nI;
       document.getElementById('lbl-w-video').textContent = Math.round(cardV) + 'px';
       document.getElementById('lbl-w-image').textContent = Math.round(cardI) + 'px';
+      document.getElementById('lbl-n-podcast').textContent = nI;
+      document.getElementById('lbl-w-podcast').textContent = Math.round(cardI) + 'px';
 
       document.getElementById('debug').innerHTML =
         `<span>vw: <b>${vw}px</b></span>` +
