@@ -18,19 +18,25 @@
       /* N visibili per tipo */
       --n-video: 1.5;
       --n-image: 2.5;
+      --n-article: 1.5;
 
       /* Limiti card */
       --video-min: 220px;
       --video-max: 320px;
       --image-min: 128px;
       --image-max: 256px;
+      --article-min: 300px;
+      --article-max: 380px;
     }
 
-    /* 768px — padding/gap ancora mobile, N aumenta */
+    /* 768px — tablet: padding/gap dedicati, N aumenta */
     @media (min-width: 768px) {
       :root {
+        --padding: 24px;
+        --gap: 16px;
         --n-video: 2.5;
         --n-image: 3.5;
+        --n-article: 2.5;
       }
     }
 
@@ -49,6 +55,7 @@
       :root {
         --n-video: 4.5;
         --n-image: 5.5;
+        --n-article: 3.5;
       }
     }
 
@@ -61,7 +68,7 @@
     body {
       background: #EBEBEB;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 40px 0 64px;
+      padding: 40px 0 140px;
     }
 
     .section {
@@ -234,6 +241,79 @@
 
 
     /* ============================================================
+       CARD ARTICLE — layout orizzontale (thumb + testo)
+       Stessa regola di clamp, min 311px / max 379px.
+       Riusa lo schema N del tipo Video (range dimensionale simile).
+    ============================================================ */
+    .card-article {
+      flex: 0 0 auto;
+      width: clamp(
+        var(--article-min),
+        calc((100vw - var(--padding) - var(--gap) * (var(--n-article) - 0.5)) / var(--n-article)),
+        var(--article-max)
+      );
+      scroll-snap-align: start;
+      display: flex;
+      align-items: stretch;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #DCDCDC;
+    }
+
+    .card-article__thumb {
+      flex: 0 0 auto;
+      width: 40%;
+      aspect-ratio: 1 / 1;
+      background: #C8C8C8;
+    }
+
+    .card-article__content {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .card-article__date {
+      height: 9px;
+      width: 34%;
+      background: #B8B8B8;
+      border-radius: 3px;
+      margin-bottom: 2px;
+    }
+
+    /* Su mobile la data scompare (comportamento voluto) */
+    @media (max-width: 767px) {
+      .card-article__date {
+        display: none;
+      }
+    }
+
+    .card-article__title-1,
+    .card-article__title-2,
+    .card-article__title-3 {
+      height: 11px;
+      background: #9E9E9E;
+      border-radius: 3px;
+    }
+    .card-article__title-1 { width: 100%; }
+    .card-article__title-2 { width: 88%; }
+    .card-article__title-3 { width: 62%; margin-bottom: 4px; }
+
+    .card-article__abstract-1,
+    .card-article__abstract-2 {
+      height: 9px;
+      background: #C0C0C0;
+      border-radius: 3px;
+    }
+    .card-article__abstract-1 { width: 100%; }
+    .card-article__abstract-2 { width: 78%; }
+
+
+    /* ============================================================
        DEBUG BAR
        Solo per sviluppo — rimuovere in produzione
     ============================================================ */
@@ -280,6 +360,12 @@
     <div class="carousel" id="carousel-podcast"></div>
   </div>
 
+  <!-- ARTICLE CAROUSEL -->
+  <div class="section">
+    <div class="section-label">Article — N <span id="lbl-n-article"></span> — min 300px / max 380px — <span id="lbl-w-article"></span></div>
+    <div class="carousel" id="carousel-article"></div>
+  </div>
+
   <!-- DEBUG BAR -->
   <div class="debug" id="debug"></div>
 
@@ -321,6 +407,24 @@
         </div>`;
     }
 
+    /* Genera card article */
+    const ac = document.getElementById('carousel-article');
+    ac.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      ac.innerHTML += `
+        <div class="card-article">
+          <div class="card-article__thumb"></div>
+          <div class="card-article__content">
+            <div class="card-article__date"></div>
+            <div class="card-article__title-1"></div>
+            <div class="card-article__title-2"></div>
+            <div class="card-article__title-3"></div>
+            <div class="card-article__abstract-1"></div>
+            <div class="card-article__abstract-2"></div>
+          </div>
+        </div>`;
+    }
+
     /* Debug bar */
     function updateDebug() {
       const vw = window.innerWidth;
@@ -329,13 +433,17 @@
       const gap  = parseFloat(cs.getPropertyValue('--gap'));
       const nV   = parseFloat(cs.getPropertyValue('--n-video'));
       const nI   = parseFloat(cs.getPropertyValue('--n-image'));
+      const nA   = parseFloat(cs.getPropertyValue('--n-article'));
 
       const rawV  = (vw - pad - gap * (nV - 0.5)) / nV;
       const rawI  = (vw - pad - gap * (nI - 0.5)) / nI;
+      const rawA  = (vw - pad - gap * (nA - 0.5)) / nA;
       const cardV = Math.min(320, Math.max(220, rawV));
       const cardI = Math.min(256, Math.max(128, rawI));
+      const cardA = Math.min(380, Math.max(300, rawA));
       const clampedV = rawV !== cardV ? ' ⚠ clamped' : '';
       const clampedI = rawI !== cardI ? ' ⚠ clamped' : '';
+      const clampedA = rawA !== cardA ? ' ⚠ clamped' : '';
 
       /* Breakpoint label */
       let bp = 'mobile';
@@ -350,6 +458,8 @@
       document.getElementById('lbl-w-image').textContent = Math.round(cardI) + 'px';
       document.getElementById('lbl-n-podcast').textContent = nI;
       document.getElementById('lbl-w-podcast').textContent = Math.round(cardI) + 'px';
+      document.getElementById('lbl-n-article').textContent = nA;
+      document.getElementById('lbl-w-article').textContent = Math.round(cardA) + 'px';
 
       document.getElementById('debug').innerHTML =
         `<span>vw: <b>${vw}px</b></span>` +
@@ -361,7 +471,9 @@
         `<span class="sep">|</span>` +
         `<span>video — N: <b>${nV}</b>  card: <b>${Math.round(cardV)}px${clampedV}</b></span>` +
         `<span class="sep">|</span>` +
-        `<span>image — N: <b>${nI}</b>  card: <b>${Math.round(cardI)}px${clampedI}</b></span>`;
+        `<span>image — N: <b>${nI}</b>  card: <b>${Math.round(cardI)}px${clampedI}</b></span>` +
+        `<span class="sep">|</span>` +
+        `<span>article — N: <b>${nA}</b>  card: <b>${Math.round(cardA)}px${clampedA}</b></span>`;
     }
 
     updateDebug();

@@ -320,9 +320,28 @@
       }
     }
 
+
+    /* VIEWPORT SIZE BADGE (debug) */
+    .viewport-badge {
+      position: fixed;
+      left: 8px;
+      bottom: 8px;
+      z-index: 999;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.85);
+      font-family: monospace;
+      font-size: 11px;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
+  <div class="viewport-badge" id="viewportBadge"></div>
   <div class="page">
 
     <div class="topbar" id="topbar">
@@ -405,6 +424,16 @@
     const mainPlayer = document.querySelector('.player');   // player principale full-width
     const miniEl     = document.getElementById('miniPlayer'); // sticky player
     const miniClose  = document.getElementById('miniClose');
+    const viewportBadge = document.getElementById('viewportBadge');
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VIEWPORT BADGE — mostra sempre la risoluzione corrente della viewport
+    // ─────────────────────────────────────────────────────────────────────────
+    function updateViewportBadge() {
+      viewportBadge.textContent = `${window.innerWidth} × ${window.innerHeight}`;
+    }
+    updateViewportBadge();
+    window.addEventListener('resize', updateViewportBadge);
 
     // ─────────────────────────────────────────────────────────────────────────
     // COSTANTI STICKY PLAYER
