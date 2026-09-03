@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagination Logic</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 32px;
+    color: #111;
+  }
+
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; margin-top: 32px; }
+  p { color: #555; }
+
+  /* --- wireframe: nessun colore/branding, solo forma e stato --- */
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .box {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #999;
+    font-family: monospace;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .box.current {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    font-weight: bold;
+  }
+
+  .box.ellipsis {
+    border-style: dashed;
+    cursor: default;
+  }
+
+  .label {
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  pre {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 12px;
+    font-size: 13px;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+
+<h1>Pagination — logica</h1>
+<p>Prototipo funzionale, non visivo: serve a verificare la sequenza di numeri generata e lo stato delle frecce.</p>
+
+<h2>Input</h2>
+<p>
+  <label>Totale pagine (N): <input type="number" id="totalPages" value="10" min="1" step="1"></label>
+</p>
+<p>
+  <label>Pagina corrente (currentPage): <input type="number" id="currentPage" value="1" step="1"></label>
+</p>
+
+<h2>Rappresentazione grafica</h2>
+<p>Wireframe: i box numerati/cliccabili aggiornano currentPage, per provare rapidamente i vari stati.</p>
+<div class="row" id="visual"></div>
+
+<h2>Output testuale</h2>
+<pre id="output"></pre>
+
+<h2>Logica</h2>
+<p>Codice sorgente delle funzioni che calcolano la sequenza (estratto automaticamente da questo file, sempre allineato a quello eseguito sopra).</p>
+<pre id="logicCode"></pre>
+
+<script>
+  const EDGE_COUNT = 3;
+  const SIBLING_COUNT = 1;
+
+  function range(a, b) {
+    const out = [];
+    for (let i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+
+  // Unisce blocchi ordinati di numeri di pagina, inserendo "..." o il numero
+  // mancante a seconda di quante pagine restano nascoste tra due blocchi.
+  function mergeBlocks(blocks) {
+    const result = blocks[0].slice();
+    for (let i = 1; i < blocks.length; i++) {
+      const prevMax = result[result.length - 1];
+      const next = blocks[i];
+      const nextMin = next[0];
+      const hidden = nextMin - prevMax - 1;
+
+      if (hidden <= 0) {
+        for (const n of next) if (n > prevMax) result.push(n);
+      } else if (hidden === 1) {
+        result.push(prevMax + 1);
+        for (const n of next) result.push(n);
+      } else {
+        result.push("...");
+        for (const n of next) result.push(n);
+      }
+    }
+    return result;
+  }
+
+  // Raggruppa un elenco di pagine ordinate/uniche in blocchi di numeri consecutivi.
+  function groupIntoRuns(sortedUniquePages) {
+    const runs = [];
+    let current = [sortedUniquePages[0]];
+    for (let i = 1; i < sortedUniquePages.length; i++) {
+      const n = sortedUniquePages[i];
+      if (n === current[current.length - 1] + 1) {
+        current.push(n);
+      } else {
+        runs.push(current);
+        current = [n];
+      }
+    }
+    runs.push(current);
+    return runs;
+  }
+
+  function computePagination(totalPagesRaw, currentPageRaw) {
+    const N = Math.max(1, Math.floor(totalPagesRaw));
+    const requestedPage = Math.floor(currentPageRaw);
+    const cp = Math.max(1, Math.min(N, requestedPage));
+
+    let items;
+
+    if (N <= EDGE_COUNT * 2) {
+      // N piccolo: le ancore coprono già tutto il range, niente puntini.
+      items = range(1, N);
+    } else {
+      const leftFull = range(1, EDGE_COUNT);
+      const rightFull = range(N - EDGE_COUNT + 1, N);
+
+      if (cp <= EDGE_COUNT || cp >= N - EDGE_COUNT + 1) {
+        // Vicino a un bordo: entrambe le ancore fisse, ma garantiamo comunque
+        // che i vicini della pagina corrente (cp-1, cp+1) siano visibili —
+        // altrimenti quando cp è proprio l'ultima pagina del blocco fisso
+        // (es. cp=edgeCount) il suo vicino resta nascosto dietro "...".
+        const center = range(Math.max(1, cp - SIBLING_COUNT), Math.min(N, cp + SIBLING_COUNT));
+        const visible = Array.from(new Set([...leftFull, ...center, ...rightFull])).sort((a, b) => a - b);
+        items = mergeBlocks(groupIntoRuns(visible));
+      } else {
+        const centerMin = cp - SIBLING_COUNT;
+        const centerMax = cp + SIBLING_COUNT;
+        const leftLeaning = centerMin <= EDGE_COUNT;
+        const rightLeaning = centerMax >= N - EDGE_COUNT + 1;
+
+        if (leftLeaning) {
+          // Il blocco centrale tocca/sovrappone l'ancora sinistra: si fondono,
+          // l'ancora destra resta piena e separata (con "..." se serve).
+          const leftBlock = range(1, Math.max(EDGE_COUNT, centerMax));
+          items = mergeBlocks([leftBlock, rightFull]);
+        } else if (rightLeaning) {
+          const rightBlock = range(Math.min(N - EDGE_COUNT + 1, centerMin), N);
+          items = mergeBlocks([leftFull, rightBlock]);
+        } else {
+          // Zona centrale pura: ancore ridotte a singola pagina.
+          const center = range(centerMin, centerMax);
+          items = mergeBlocks([[1], center, [N]]);
+        }
+      }
+    }
+
+    return {
+      items,
+      requestedPage,
+      currentPage: cp,
+      wasClamped: requestedPage !== cp,
+      prevHidden: cp === 1,
+      nextHidden: cp === N
+    };
+  }
+
+  function formatItems(items) {
+    return "[" + items.map(i => (i === "..." ? '"..."' : i)).join(",") + "]";
+  }
+
+  const totalPagesInput = document.getElementById("totalPages");
+  const currentPageInput = document.getElementById("currentPage");
+
+  function goTo(page) {
+    currentPageInput.value = page;
+    render();
+  }
+
+  function render() {
+    const totalPages = Number(totalPagesInput.value);
+    const currentPage = Number(currentPageInput.value);
+
+    const out = document.getElementById("output");
+    const visual = document.getElementById("visual");
+
+    if (!Number.isFinite(totalPages) || !Number.isFinite(currentPage)) {
+      out.textContent = "Inserisci valori numerici validi per N e currentPage.";
+      visual.innerHTML = "";
+      return;
+    }
+
+    const result = computePagination(totalPages, currentPage);
+    const N = Math.max(1, Math.floor(totalPages));
+
+    // --- output testuale ---
+    const lines = [];
+    lines.push("N = " + N);
+    lines.push("currentPage richiesto = " + result.requestedPage +
+      (result.wasClamped ? " -> clampato a " + result.currentPage : ""));
+    lines.push("");
+    lines.push("1) sequenza: " + formatItems(result.items));
+    lines.push("2) freccia precedente: " + (result.prevHidden ? "nascosta" : "visibile"));
+    lines.push("3) freccia successiva: " + (result.nextHidden ? "nascosta" : "visibile"));
+    out.textContent = lines.join("\n");
+
+    // --- rappresentazione grafica ---
+    visual.innerHTML = "";
+
+    if (!result.prevHidden) {
+      const prevBox = document.createElement("div");
+      prevBox.className = "box arrow";
+      prevBox.textContent = "‹";
+      prevBox.addEventListener("click", () => goTo(result.currentPage - 1));
+      visual.appendChild(prevBox);
+    }
+
+    for (const item of result.items) {
+      const box = document.createElement("div");
+      if (item === "...") {
+        box.className = "box ellipsis";
+        box.textContent = "...";
+      } else {
+        box.className = "box" + (item === result.currentPage ? " current" : "");
+        box.textContent = item;
+        box.addEventListener("click", () => goTo(item));
+      }
+      visual.appendChild(box);
+    }
+
+    if (!result.nextHidden) {
+      const nextBox = document.createElement("div");
+      nextBox.className = "box arrow";
+      nextBox.textContent = "›";
+      nextBox.addEventListener("click", () => goTo(result.currentPage + 1));
+      visual.appendChild(nextBox);
+    }
+  }
+
+  totalPagesInput.addEventListener("input", render);
+  currentPageInput.addEventListener("input", render);
+
+  render();
+
+  // --- mostra il codice sorgente della logica, per riferimento diretto ---
+  document.getElementById("logicCode").textContent =
+    "const EDGE_COUNT = " + EDGE_COUNT + ";\n" +
+    "const SIBLING_COUNT = " + SIBLING_COUNT + ";\n\n" +
+    [range, mergeBlocks, groupIntoRuns, computePagination]
+      .map(fn => fn.toString())
+      .join("\n\n");
+</script>
+
+</body>
+</html>
