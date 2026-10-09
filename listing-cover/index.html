@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listing Cover — Prototipo</title>
+  <style>
+
+    /* ============================================================
+       SISTEMA COVER — VARIABILI
+       Modifica solo questi valori per aggiornare il sistema.
+       Formula altezza: clamp(min, valore fluido in vh, max)
+    ============================================================ */
+    :root {
+      /* Griglia — mobile (default) */
+      --padding: 16px;
+      --gap: 12px;
+      --cols: 3;
+      --topbar-h: 56px;
+      --container-max: 1280px;
+
+      /* Cover — mobile (uguale con e senza highlight) */
+      --cover-min: 200px;
+      --cover-fluid: 30vh;
+      --cover-max: 256px;
+
+      /* Immagine cover mobile (OPZIONALE): 1080×720 (3:2), pensata per il taglio
+         mobile. Se non c'è, si usa l'immagine desktop. Ancorata in alto al centro */
+      --img-w: 1080;
+      --img-h: 720;
+
+      /* Highlight su mobile: sotto la cover, risale di 32px */
+      --hl-mobile-overlap: 32px;
+    }
+
+    /* 768px — tablet */
+    @media (min-width: 768px) {
+      :root {
+        --padding: 24px;
+        --gap: 16px;
+        --cols: 4;
+        --topbar-h: 64px;
+        /* Immagine cover desktop/tablet: 1920×640 (3:1) */
+        --img-w: 1920;
+        --img-h: 640;
+      }
+    }
+
+    /* 1024px — desktop */
+    @media (min-width: 1024px) {
+      :root {
+        --padding: 64px;
+        --gap: 24px;
+        --cols: 5;
+      }
+    }
+
+    /* ---- Tablet + desktop: SENZA highlight ---- */
+    @media (min-width: 768px) {
+      .page[data-mode="nohl"] {
+        --cover-min: 280px;
+        --cover-fluid: 45vh;
+        --cover-max: 420px;
+        --pad-top: 0px;
+        --overlap-pct: 0.4;         /* la listing risale sul 40% della cover */
+      }
+
+      /* ---- Tablet + desktop: CON highlight ---- */
+      .page[data-mode="hl"] {
+        --cover-min: 480px;
+        --cover-fluid: 70vh;
+        --cover-max: 640px;
+        --pad-top: clamp(32px, 6vh, 96px);
+        --overlap: clamp(96px, 12vh, 160px);
+      }
+    }
+
+
+    /* ============================================================
+       BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #EBEBEB;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #111;
+      padding-bottom: 120px;          /* spazio per la debug bar */
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--padding);
+    }
+
+    .dims {
+      font-size: 9px;
+      font-family: 'SF Mono', 'Roboto Mono', monospace;
+      color: #888;
+      letter-spacing: 0.04em;
+    }
+
+    /* Placeholder testo */
+    .bar { height: 11px; background: #A8A8A8; border-radius: 3px; }
+    .bar.light { height: 9px; background: #C0C0C0; }
+    .bar.title { height: 22px; background: #9E9E9E; border-radius: 4px; }
+
+
+    /* ============================================================
+       TOPBAR — contiene il selettore di configurazione
+    ============================================================ */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--topbar-h);
+      background: #DCDCDC;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+    }
+
+    .topbar-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #999;
+      white-space: nowrap;
+    }
+
+    .switch { display: flex; gap: 4px; margin-left: auto; }
+    .switch button {
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid #999;
+      background: #fff;
+      font: 600 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #111;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .switch button[aria-pressed="true"] { background: #111; color: #fff; border-color: #111; }
+
+    @media (max-width: 767px) {
+      .topbar { padding: 0 12px; gap: 8px; }
+      .topbar-label { display: none; }
+      .switch { margin: 0 auto; }
+    }
+
+
+    /* ============================================================
+       COVER
+       height: clamp(min, fluido, max)
+    ============================================================ */
+    .page { --cover-h: clamp(var(--cover-min), var(--cover-fluid), var(--cover-max)); }
+
+    @media (min-width: 768px) {
+      .page[data-mode="nohl"] { --overlap: calc(var(--cover-h) * var(--overlap-pct)); }
+    }
+
+    .cover {
+      position: relative;
+      height: var(--cover-h);
+      background: #C8C8C8;
+      overflow: hidden;
+    }
+
+    /* Overlay: sfuma verso lo sfondo pagina */
+    .cover::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(235,235,235,0) 40%, #EBEBEB 100%);
+    }
+    .page[data-mode="hl"] .cover::after {
+      background: linear-gradient(180deg, rgba(235,235,235,0.2) 0%, rgba(235,235,235,0.85) 70%, #EBEBEB 100%);
+    }
+
+    /* Immagine: riempie l'area, ritagliata (object-fit: cover), ancorata in alto al centro */
+    .cover-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+
+    .page { position: relative; }
+
+    /* FINE IMMAGINE — linea a puntini sul bordo inferiore della cover,
+       sopra la listing così resta leggibile anche dove si sovrappone */
+    .img-end {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: var(--cover-h);
+      border-top: 1px dotted #444;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .img-end span {
+      position: absolute;
+      right: 12px;
+      top: 4px;
+      font-size: 9px;
+      font-family: 'SF Mono', 'Roboto Mono', monospace;
+      letter-spacing: 0.04em;
+      color: #111;
+      background: #fff;
+      border: 1px dotted #444;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .cover .dims {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      z-index: 3;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 3px 6px;
+      border-radius: 3px;
+    }
+
+
+    /* ============================================================
+       HIGHLIGHT
+       Tablet/desktop: dentro la cover, tra pad-top e overlap.
+       Mobile: sotto la cover.
+    ============================================================ */
+    .thumb {
+      aspect-ratio: 16 / 9;
+      background: #B4B4B4;
+      border-radius: 6px;
+      position: relative;
+    }
+    .thumb::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-style: solid;
+      border-width: 10px 0 10px 18px;
+      border-color: transparent transparent transparent rgba(255,255,255,0.7);
+    }
+
+    .cta {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 36px;
+      padding: 0 16px;
+      background: #111;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #777;
+    }
+    .hl-title { font-size: 24px; line-height: 1.25; font-weight: 700; }
+    .hl-desc {
+      font-size: 15px;
+      line-height: 1.5;
+      color: #555;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    @media (max-width: 767px) {
+      .hl-title { font-size: 20px; }
+    }
+
+    .hl-cover {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: var(--pad-top);
+      bottom: var(--overlap);
+      z-index: 2;
+      align-items: center;
+    }
+    .hl-cover .container { width: 100%; }
+    .hl-row { display: flex; align-items: center; gap: 32px; }
+    .hl-row .thumb { flex: none; width: clamp(240px, 32%, 420px); }
+    .hl-text { flex: 1; max-width: 520px; display: flex; flex-direction: column; gap: 8px; }
+
+    .hl-mobile {
+      display: none;
+      position: relative;
+      z-index: 2;
+      margin-top: calc(-1 * var(--hl-mobile-overlap));
+      padding-bottom: 24px;
+    }
+    .hl-mobile .hl-text { margin-top: 12px; }
+
+    @media (min-width: 768px) {
+      .page[data-mode="hl"] .hl-cover { display: flex; }
+    }
+    @media (max-width: 767px) {
+      .page[data-mode="hl"] .hl-mobile { display: block; }
+    }
+
+
+    /* ============================================================
+       LISTING — risale sulla cover di --overlap (solo tablet/desktop)
+    ============================================================ */
+    .listing {
+      position: relative;
+      z-index: 2;
+      margin-top: calc(-1 * var(--overlap, 0px));
+    }
+    @media (max-width: 767px) {
+      .listing { margin-top: 0; padding-top: 16px; }
+    }
+
+    .title-row {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .title-row h1 { font-size: 28px; line-height: 1.2; font-weight: 700; }
+    @media (max-width: 767px) {
+      .title-row h1 { font-size: 22px; }
+    }
+
+    .select {
+      width: 125px;
+      height: 48px;
+      border: 1px solid #999;
+      border-radius: 6px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+    }
+    .select { font-size: 14px; font-weight: 600; white-space: nowrap; width: auto; }
+
+    /* Descrizione: max 3 righe. Se il testo è più lungo, il link "… Altro"
+       sta a fine terza riga e il testo gli gira intorno (nessuna sfumatura:
+       funziona su qualunque sfondo, anche sopra l'immagine della cover).
+       Tecnica: uno pseudo-elemento flottante alto (100% - 1 riga) spinge
+       il link, anch'esso flottante, sull'ultima riga visibile. */
+    .desc {
+      display: flex;                /* rende risolvibile l'altezza in % */
+      max-width: 960px;
+      margin-top: 8px;
+      --lh: 1.5em;
+    }
+    .desc-text {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+      color: #555;
+      max-height: calc(var(--lh) * 3);
+      overflow: hidden;
+    }
+    .desc-text::before {
+      content: '';
+      float: right;
+      width: 0;
+      height: calc(100% - var(--lh));
+    }
+    .desc-toggle {
+      float: right;
+      clear: both;
+      margin-left: 6px;
+      border: 0;
+      padding: 0;
+      background: none;
+      font: 700 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #111;
+      cursor: pointer;
+    }
+    .desc-toggle .ell { font-weight: 400; color: #555; margin-right: 4px; }
+
+    /* Espansa: testo completo, "Meno" resta nella stessa posizione
+       (fine ultima riga, a destra; se non c'è spazio va a capo) */
+    .desc.open .desc-text { max-height: none; }
+
+    .grid {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(var(--cols), 1fr);
+      gap: var(--gap);
+    }
+    .poster { aspect-ratio: 3 / 4; background: #C8C8C8; border-radius: 6px; }
+
+    .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 32px; }
+    .pagination span {
+      min-width: 36px;
+      height: 36px;
+      border: 1px solid #999;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .pagination span.current { background: #111; color: #fff; border-color: #111; font-weight: bold; }
+    .pagination span.ellipsis { border-style: dashed; }
+
+    footer { margin-top: 48px; height: 280px; background: #DCDCDC; }
+
+
+    /* ============================================================
+       FOLD — bordo inferiore della finestra a scroll 0
+    ============================================================ */
+    .fold {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100vh;
+      border-top: 2px dashed #111;
+      z-index: 40;
+      pointer-events: none;
+    }
+    .fold span {
+      position: absolute;
+      right: 12px;
+      bottom: 4px;
+      font-size: 9px;
+      font-family: 'SF Mono', 'Roboto Mono', monospace;
+      letter-spacing: 0.04em;
+      color: #fff;
+      background: #111;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+
+    /* ============================================================
+       DEBUG BAR
+       Solo per sviluppo — rimuovere in produzione
+    ============================================================ */
+    .debug {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Roboto Mono', monospace;
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 20px;
+      z-index: 100;
+    }
+    .debug span { color: #aaa; }
+    .debug b { color: #fff; }
+    .debug .rule { flex-basis: 100%; color: #777; }
+
+    /* Mini-mappa crop: immagine intera 3:1, il riquadro bianco è la parte visibile */
+    .crop-map {
+      position: relative;
+      width: 120px;
+      height: 40px;
+      background: #333 center / 100% 100% no-repeat;
+      opacity: 0.9;
+      flex: none;
+    }
+    .crop-map::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+    }
+    .crop-map i {
+      position: absolute;
+      border: 1.5px solid #fff;
+      background-repeat: no-repeat;
+      z-index: 1;
+    }
+    .crop-wrap { display: flex; align-items: center; gap: 8px; }
+
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR + SELETTORE -->
+  <header class="topbar">
+    <span class="topbar-label">Listing — Cover</span>
+    <div class="switch" role="group" aria-label="Configurazione">
+      <button type="button" data-set="hl" aria-pressed="true">Con highlight</button>
+      <button type="button" data-set="nohl" aria-pressed="false">Senza highlight</button>
+    </div>
+  </header>
+
+  <main class="page" id="page" data-mode="hl">
+
+    <!-- COVER -->
+    <section class="cover" id="cover">
+      <!-- Due sorgenti: mobile (opzionale, 1080×720) e desktop (1920×640).
+           Senza la versione mobile, il browser usa quella desktop. -->
+      <picture>
+        <source media="(max-width: 767px)" srcset="https://picsum.photos/id/1015/1080/720">
+        <img class="cover-img" id="coverImg" src="https://picsum.photos/id/1018/1920/640" alt="">
+      </picture>
+      <div class="dims" id="coverDims"></div>
+      <div class="hl-cover">
+        <div class="container">
+          <div class="hl-row">
+            <div class="thumb"></div>
+            <div class="hl-text">
+              <div class="eyebrow">In evidenza</div>
+              <div class="hl-title">Titolo del contenuto in evidenza su una o due righe</div>
+              <p class="hl-desc">Breve descrizione del video in evidenza. Il testo è limitato a tre righe, così il blocco non cresce oltre lo spazio disponibile nella cover anche sugli schermi più bassi.</p>
+              <span class="cta" style="margin-top:8px">▶ Guarda ora</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="img-end" aria-hidden="true"><span id="imgEndLabel">FINE IMMAGINE COVER</span></div>
+
+    <!-- HIGHLIGHT MOBILE -->
+    <section class="hl-mobile">
+      <div class="container">
+        <div class="thumb"></div>
+        <div class="hl-text">
+          <div class="eyebrow">In evidenza</div>
+          <div class="hl-title">Titolo del contenuto in evidenza su una o due righe</div>
+          <p class="hl-desc">Breve descrizione del video in evidenza. Il testo è limitato a tre righe, così il blocco non cresce oltre lo spazio disponibile nella cover anche sugli schermi più bassi.</p>
+          <span class="cta" style="margin-top:8px">▶ Guarda ora</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- LISTING -->
+    <section class="listing">
+      <div class="container">
+        <div class="title-row">
+          <h1>Commedia</h1>
+          <div class="select">Più recenti ▾</div>
+        </div>
+
+        <div class="desc" id="desc">
+          <p class="desc-text"><button type="button" class="desc-toggle" id="descToggle"><span class="ell">…</span>Altro</button>Una selezione di film commedia dal catalogo, dai grandi classici del cinema italiano alle produzioni più recenti. La descrizione è gestita dalla redazione e può essere anche molto lunga: per questo è limitata a tre righe, con la possibilità di espanderla. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="pagination" aria-hidden="true">
+          <span class="current">1</span><span>2</span><span>3</span><span class="ellipsis">…</span><span>9</span><span>10</span><span>›</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer></footer>
+
+  <div class="fold" aria-hidden="true"><span>FOLD · BORDO INFERIORE DELLO SCHERMO</span></div>
+
+  <!-- DEBUG BAR -->
+  <div class="debug" id="debug"></div>
+
+
+  <script>
+    const page   = document.getElementById('page');
+    const cover  = document.getElementById('cover');
+    const grid   = document.getElementById('grid');
+    const listing = document.querySelector('.listing');
+
+    /* Genera locandine 3:4 */
+    for (let i = 0; i < 25; i++) {
+      grid.innerHTML += '<div class="poster"></div>';
+    }
+
+    /* Selettore configurazione (+ hash per linkare direttamente un caso) */
+    function setMode(mode) {
+      page.dataset.mode = mode;
+      document.querySelectorAll('.switch button').forEach(b =>
+        b.setAttribute('aria-pressed', String(b.dataset.set === mode)));
+      history.replaceState(null, '', mode === 'hl' ? '#con-highlight' : '#senza-highlight');
+      updateDebug();
+    }
+    document.querySelectorAll('.switch button').forEach(b =>
+      b.addEventListener('click', () => setMode(b.dataset.set)));
+
+    /* Descrizione */
+    const desc = document.getElementById('desc');
+    document.getElementById('descToggle').addEventListener('click', e => {
+      const open = desc.classList.toggle('open');
+      e.currentTarget.innerHTML = open ? 'Meno' : '<span class="ell">…</span>Altro';
+      updateDebug();
+    });
+
+    /* Debug bar */
+    function updateDebug() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const mobile = vw < 768;
+      const mode = page.dataset.mode;
+      const cs = getComputedStyle(page);
+
+      const min = parseFloat(cs.getPropertyValue('--cover-min'));
+      const max = parseFloat(cs.getPropertyValue('--cover-max'));
+      const fluidVh = parseFloat(cs.getPropertyValue('--cover-fluid'));
+      const fluid = vh * fluidVh / 100;
+
+      let state = 'fluido';
+      if (fluid <= min) state = '⚠ min';
+      else if (fluid >= max) state = '⚠ max';
+
+      const coverH  = cover.getBoundingClientRect().height;
+      const overlap = mobile ? 0 : Math.max(0, -parseFloat(getComputedStyle(listing).marginTop) || 0);
+      const padTop  = (!mobile && mode === 'hl') ? Math.min(96, Math.max(32, vh * 0.06)) : 0;
+
+      /* Prima riga della griglia visibile a scroll 0? */
+      const first = grid.firstElementChild.getBoundingClientRect();
+      const top = first.top + window.scrollY;
+      const bottom = first.bottom + window.scrollY;
+      let fold = 'no';
+      if (bottom <= vh) fold = 'sì, intera';
+      else if (top < vh) fold = 'in parte (' + Math.round((vh - top) / first.height * 100) + '%)';
+
+      let bp = 'mobile';
+      if (vw >= 1440) bp = '1440px';
+      else if (vw >= 1024) bp = '1024px';
+      else if (vw >= 768) bp = '768px';
+
+      const fluidStr = `${fluidVh}vh`;
+      let rule = `cover: clamp(${min}px, ${fluidStr}, ${max}px)`;
+      if (!mobile && mode === 'hl') rule += '  ·  padding-top: clamp(32px, 6vh, 96px)  ·  overlap: clamp(96px, 12vh, 160px)';
+      else if (!mobile) rule += '  ·  overlap: 40% della cover';
+      else if (mode === 'hl') rule += '  ·  highlight sotto la cover, risale di 32px';
+
+      /* Il link compare solo se il testo supera le 3 righe */
+      const descP = desc.querySelector('.desc-text');
+      const descBtn = document.getElementById('descToggle');
+      if (!desc.classList.contains('open')) {
+        descBtn.style.display = 'none';
+        const overflows = descP.scrollHeight > descP.clientHeight + 1;
+        descBtn.style.display = overflows ? '' : 'none';
+      }
+
+      /* Crop: scala = max(W/IW, H/IH) con le misure dell'immagine attiva;
+         ciò che eccede viene tagliato
+         ai lati (in parti uguali) e in basso (ancoraggio top) */
+      const cw = cover.getBoundingClientRect().width;
+      const IW = parseFloat(cs.getPropertyValue('--img-w'));
+      const IH = parseFloat(cs.getPropertyValue('--img-h'));
+      const scale = Math.max(cw / IW, coverH / IH);
+      const visW = Math.min(1, cw / (IW * scale));
+      const visH = Math.min(1, coverH / (IH * scale));
+      const cropTxt = `${Math.round(visW * 100)}% L × ${Math.round(visH * 100)}% A`;
+      const imgTxt = vw < 768 ? `immagine mobile ${IW}×${IH} (opzionale)` : `immagine desktop ${IW}×${IH}`;
+
+      document.getElementById('imgEndLabel').textContent = `FINE IMMAGINE COVER · ${Math.round(coverH)}px`;
+
+      document.getElementById('coverDims').textContent =
+        `COVER ${Math.round(cw)}×${Math.round(coverH)}px — ${state} — ${imgTxt} — visibile ${cropTxt}`;
+
+      const src = document.getElementById('coverImg').currentSrc;
+      const mapH = 40, mapW = Math.round(mapH * IW / IH);
+      const rect = {
+        w: visW * mapW,
+        h: visH * mapH,
+        l: (1 - visW) / 2 * mapW,
+        t: 0
+      };
+
+      document.getElementById('debug').innerHTML = [
+        `<span>viewport</span> <b>${vw}×${vh}</b>`,
+        `<span>bp</span> <b>${bp}</b>`,
+        `<span>cover</span> <b>${Math.round(coverH)}px</b> <span>${state}</span>`,
+        `<span>padding-top</span> <b>${mobile || mode !== 'hl' ? '—' : Math.round(padTop) + 'px'}</b>`,
+        `<span>overlap</span> <b>${mobile ? (mode === 'hl' ? '32px (highlight)' : '0') : Math.round(overlap) + 'px'}</b>`,
+        `<span>1ª riga sopra il fold</span> <b>${fold}</b>`,
+        `<span class="crop-wrap"><span>crop ${vw < 768 ? 'img mobile' : 'img desktop'}</span> <span class="crop-map" style="width:${mapW}px;background-image:url('${src}')"><i style="left:${rect.l}px;top:${rect.t}px;width:${rect.w}px;height:${rect.h}px;background-image:url('${src}');background-size:${mapW}px ${mapH}px;background-position:${-rect.l}px 0"></i></span> <b>${cropTxt}</b></span>`,
+        `<span class="rule">${rule}</span>`
+      ].join('');
+    }
+
+    window.addEventListener('resize', updateDebug);
+    document.getElementById('coverImg').addEventListener('load', updateDebug);
+    setMode(location.hash === '#senza-highlight' ? 'nohl' : 'hl');
+  </script>
+
+</body>
+</html>
